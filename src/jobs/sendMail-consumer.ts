@@ -1,5 +1,5 @@
 import { MailerService } from '@nestjs-modules/mailer';
-import { Process, Processor } from '@nestjs/bull';
+import { OnQueueActive, OnQueueCompleted, OnQueueProgress, Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { CreateUserDto } from 'src/create-user/create-user-dto';
@@ -13,8 +13,6 @@ export class SendMailConsumer {
     @Process('sendMail-job')
     async sendMailJob(job: Job<CreateUserDto>): Promise<void> {
         const { data } = job;
-        this.logger.debug('Start transcoding...');
-        this.logger.debug(data);
         
         await this.mailService.sendMail({
             to: data.email,
@@ -22,7 +20,16 @@ export class SendMailConsumer {
             subject: 'Seja bem vindo!',
             text: `Olá ${data.name}, seu cadastro foi realizado com sucesso.Seja bem vindo(a)!`
         });
+    }
 
-        this.logger.debug('Transcoding completed!');
+    @OnQueueCompleted() 
+    onCompleted(job: Job) {
+        this.logger.debug(`Transcoding completed - ${job.name}`);
+    }
+
+    @OnQueueActive() 
+    onQueueActive(job: Job) {
+        this.logger.debug('Start transcoding...');
+        this.logger.debug(job.data);
     }
 }
